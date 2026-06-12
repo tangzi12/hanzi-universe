@@ -1,464 +1,491 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>汉字宇宙 - 完整开发原型</title>
-    <style>
-        /* ================= 全局与背景 ================= */
-        :root { --bg-deep: #050011; --ui-glass: rgba(255, 255, 255, 0.1); --accent: #00d2ff; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: var(--bg-deep); font-family: 'KaiTi', 'Microsoft YaHei', serif; color: white; touch-action: none; user-select: none; }
-        
-        .star-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none;
-            background-image: radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 3px), radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 2px);
-            background-size: 550px 550px, 350px 350px; animation: twinkle 20s linear infinite; }
-        @keyframes twinkle { from { transform: translateY(0); } to { transform: translateY(-550px); } }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>汉字宇宙 - 竖屏手游首页</title>
+  <style>
+    :root {
+      --frame-w: min(100vw, 450px);
+      --frame-h: min(100vh, calc(var(--frame-w) * 16 / 9));
+      --deep: #060012;
+      --panel: rgba(8, 7, 23, 0.72);
+      --text: rgba(255, 255, 255, 0.92);
+    }
 
-        /* ================= 宇宙星球系统 ================= */
-        #universe-container { position: relative; width: 100%; height: 100%; z-index: 1; }
-        .planet-wrapper { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 10; }
-        .planet-wrapper:active { transform: scale(0.9); }
-        .planet-body { border-radius: 50%; box-shadow: inset -10px -10px 20px rgba(0,0,0,0.5), 0 0 15px rgba(255,255,255,0.3); position: relative; overflow: hidden; animation: float 6s ease-in-out infinite alternate; display: flex; align-items: center; justify-content: center; font-size: 40px; color: rgba(255,255,255,0.9); text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-        
-        .texture-1 { background: linear-gradient(45deg, #ff9a9e 0%, #fecfef 99%); }
-        .texture-2 { background: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%); }
-        .texture-3 { background: linear-gradient(to right, #fa709a 0%, #fee140 100%); }
-        .texture-4 { background: radial-gradient(circle at 30% 30%, #a18cd1 0%, #fbc2eb 100%); }
-        .texture-mars { background: radial-gradient(circle at 30% 30%, #fca5a5 0%, #b91c1c 100%); } /* 火星专用 */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-        .planet-label { margin-top: 10px; font-size: 18px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.8); letter-spacing: 2px; }
-        @keyframes float { from { transform: translateY(0px); } to { transform: translateY(-15px); } }
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 14%, rgba(116, 72, 255, 0.34), transparent 34%),
+        radial-gradient(circle at 15% 74%, rgba(0, 210, 255, 0.16), transparent 28%),
+        #020008;
+      color: var(--text);
+      font-family: "KaiTi", "STKaiti", "Microsoft YaHei", serif;
+      touch-action: none;
+      user-select: none;
+    }
 
-        /* ================= UI 交互层 ================= */
-        .ui-layer { position: fixed; bottom: 30px; left: 0; width: 100%; z-index: 20; display: flex; justify-content: center; pointer-events: none; gap: 15px; flex-wrap: wrap; padding: 0 15px; box-sizing: border-box;}
-        .action-btn-ui { pointer-events: auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 12px 24px; border-radius: 50px; font-size: 14px; font-weight: bold; backdrop-filter: blur(10px); transition: all 0.3s; cursor: pointer; white-space: nowrap;}
-        .action-btn-ui:active { transform: scale(0.95); }
-        
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 30; display: none; align-items: center; justify-content: center; }
-        .modal-overlay.active { display: flex; }
-        .creator-panel { width: 85%; max-width: 400px; background: rgba(20, 20, 30, 0.95); border: 1px solid rgba(255,255,255,0.2); border-radius: 20px; padding: 30px; text-align: center; box-sizing: border-box;}
-        .input-group { margin-bottom: 20px; text-align: left; }
-        .input-group label { display: block; margin-bottom: 8px; color: #aaa; font-size: 14px; }
-        .input-group input[type="text"] { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #111; color: white; font-size: 16px; outline: none; box-sizing: border-box;}
-        .file-upload-btn { display: block; width: 100%; padding: 12px; background: rgba(255,255,255,0.1); border: 1px dashed #666; border-radius: 8px; color: #ccc; cursor: pointer; transition: 0.3s; text-align: center; box-sizing: border-box;}
-        .submit-btn { width: 100%; padding: 15px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; background: var(--accent); color: #000; margin-top: 10px;}
+    body {
+      display: grid;
+      place-items: center;
+    }
 
-        /* ================= 视频播放层 ================= */
-        .video-player-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 40; display: none; flex-direction: column; align-items: center; justify-content: center; }
-        .video-player-overlay.active { display: flex; }
-        video { width: 100%; max-height: 80vh; background: #000; }
-        .close-video { position: absolute; top: 20px; right: 20px; color: white; font-size: 40px; cursor: pointer; z-index: 41; line-height: 1;}
+    .phone-stage {
+      position: relative;
+      width: var(--frame-w);
+      height: var(--frame-h);
+      max-height: 100vh;
+      aspect-ratio: 9 / 16;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse at 52% 30%, rgba(114, 79, 255, 0.32) 0%, rgba(29, 17, 75, 0.52) 30%, transparent 62%),
+        radial-gradient(circle at 78% 72%, rgba(0, 221, 255, 0.14), transparent 26%),
+        linear-gradient(180deg, #130821 0%, #080017 48%, #020008 100%);
+      box-shadow: 0 0 60px rgba(117, 92, 255, 0.22);
+    }
 
-        /* ================= “猫”字教学场景 ================= */
-        #cat-scene { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 50; display: none; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.8s; }
-        #cat-scene.active { display: flex; opacity: 1; }
-        .stage-box { width: 300px; height: 300px; position: relative; display: flex; justify-content: center; align-items: center; }
-        .cat-img { position: absolute; width: 200px; opacity: 0; transition: all 0.5s; font-size: 100px; text-align: center; line-height: 200px; }
-        .xing-shu { font-family: "STXingkai", "Xingkai SC", cursive; color: #333; transform: scale(1.5); }
-        .hei-ti { font-family: "SimHei", "Microsoft YaHei", sans-serif; color: #000; font-weight: 900; font-size: 120px; }
-        .stroke-container { position: absolute; width: 200px; height: 200px; }
-        .stroke { fill: none; stroke: #ff4757; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1000; stroke-dashoffset: 1000; }
-        .magic-pen { position: absolute; width: 40px; height: 40px; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ff4757"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>') no-repeat center/contain; pointer-events: none; opacity: 0; z-index: 30; transition: opacity 0.3s; }
-        @keyframes drawStroke { to { stroke-dashoffset: 0; } }
-        .visible { opacity: 1 !important; transform: scale(1) !important; }
+    .nebula,
+    .stars,
+    .dust {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
 
-        /* ================= 字碰碰 Canvas ================= */
-        #physics-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 15; display: none; cursor: grab; }
-        #physics-canvas.active { display: block; }
-        .physics-hint { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.8); font-size: 14px; z-index: 16; pointer-events: none; display: none; text-shadow: 0 2px 4px rgba(0,0,0,0.8);}
-        #physics-canvas.active + .physics-hint { display: block; }
-    </style>
+    .nebula {
+      background:
+        radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.1), transparent 8%),
+        radial-gradient(circle at 56% 42%, rgba(255, 95, 194, 0.22), transparent 18%),
+        radial-gradient(circle at 42% 48%, rgba(80, 220, 255, 0.18), transparent 22%);
+      filter: blur(18px);
+      opacity: 0.78;
+      animation: breathe 8s ease-in-out infinite alternate;
+    }
+
+    .stars {
+      background-image:
+        radial-gradient(1px 1px at 12% 16%, #fff, transparent),
+        radial-gradient(1px 1px at 28% 65%, #fff, transparent),
+        radial-gradient(2px 2px at 54% 14%, #fff, transparent),
+        radial-gradient(1px 1px at 76% 31%, #fff, transparent),
+        radial-gradient(2px 2px at 91% 72%, #fff, transparent),
+        radial-gradient(1px 1px at 39% 88%, #fff, transparent),
+        radial-gradient(1px 1px at 64% 80%, #fff, transparent);
+      background-size: 220px 360px;
+      animation: driftStars 18s linear infinite;
+      opacity: 0.84;
+    }
+
+    .dust {
+      background-image:
+        radial-gradient(circle at center, rgba(255,255,255,0.55) 0 1px, transparent 1.5px);
+      background-size: 54px 54px;
+      mask-image: radial-gradient(ellipse at 50% 50%, #000 0%, transparent 74%);
+      opacity: 0.28;
+      animation: dustSpin 24s linear infinite;
+    }
+
+    .hud {
+      position: absolute;
+      top: clamp(18px, 5.6vh, 42px);
+      left: 22px;
+      right: 22px;
+      z-index: 10;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .title-group {
+      text-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+    }
+
+    .eyebrow {
+      margin-bottom: 8px;
+      font: 600 12px/1 "Microsoft YaHei", sans-serif;
+      letter-spacing: 0.18em;
+      color: rgba(139, 226, 255, 0.82);
+    }
+
+    h1 {
+      font-size: clamp(34px, 10vw, 48px);
+      line-height: 1;
+      letter-spacing: 0;
+      font-weight: 900;
+    }
+
+    .counter {
+      min-width: 74px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.26);
+      text-align: center;
+      font-family: "Microsoft YaHei", sans-serif;
+    }
+
+    .counter strong {
+      display: block;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .counter span {
+      display: block;
+      margin-top: 4px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.68);
+    }
+
+    .orbit-field {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+    }
+
+    .planet {
+      --size: 52px;
+      --glow: #67e8f9;
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: var(--size);
+      height: var(--size);
+      border: 0;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 31% 26%, rgba(255, 255, 255, 0.88) 0 8%, transparent 26%),
+        radial-gradient(circle at 32% 30%, var(--light), var(--base) 45%, var(--shade) 100%);
+      box-shadow:
+        inset calc(var(--size) * -0.12) calc(var(--size) * -0.14) calc(var(--size) * 0.22) rgba(0, 0, 0, 0.48),
+        0 0 calc(var(--size) * 0.5) color-mix(in srgb, var(--glow) 80%, transparent),
+        0 0 calc(var(--size) * 1.15) color-mix(in srgb, var(--glow) 28%, transparent);
+      color: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-size: calc(var(--size) * 0.58);
+      line-height: 1;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+      transform: translate3d(var(--x), var(--y), 0);
+      transition: filter 0.2s ease, box-shadow 0.2s ease;
+      will-change: transform;
+    }
+
+    .planet::before {
+      content: "";
+      position: absolute;
+      inset: -38%;
+      border-radius: 50%;
+      background: radial-gradient(circle, color-mix(in srgb, var(--glow) 34%, transparent) 0%, transparent 66%);
+      opacity: 0.72;
+      z-index: -1;
+    }
+
+    .planet::after {
+      content: "";
+      position: absolute;
+      inset: 15%;
+      border-radius: 50%;
+      border-top: 1px solid rgba(255, 255, 255, 0.18);
+      transform: rotate(-22deg);
+      opacity: 0.5;
+    }
+
+    .planet.ring .ring {
+      position: absolute;
+      width: 170%;
+      height: 48%;
+      border: 1.5px solid color-mix(in srgb, var(--glow) 62%, white 20%);
+      border-left-color: transparent;
+      border-right-color: transparent;
+      border-radius: 50%;
+      transform: rotate(-18deg);
+      opacity: 0.56;
+      pointer-events: none;
+    }
+
+    .planet .char {
+      position: relative;
+      z-index: 2;
+      opacity: 0.58;
+      mix-blend-mode: screen;
+      transform: translateY(1px);
+    }
+
+    .planet:active {
+      filter: brightness(1.18);
+      box-shadow:
+        inset calc(var(--size) * -0.1) calc(var(--size) * -0.12) calc(var(--size) * 0.2) rgba(0, 0, 0, 0.4),
+        0 0 calc(var(--size) * 0.8) var(--glow),
+        0 0 calc(var(--size) * 1.6) color-mix(in srgb, var(--glow) 42%, transparent);
+    }
+
+    .dock {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 18px;
+      z-index: 12;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .info-panel {
+      min-height: 62px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 8px;
+      background: rgba(8, 7, 23, 0.76);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(12px);
+      font-family: "Microsoft YaHei", sans-serif;
+    }
+
+    .info-panel .label {
+      font-size: 11px;
+      color: rgba(139, 226, 255, 0.76);
+    }
+
+    .info-panel .value {
+      margin-top: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .play-chip {
+      width: 62px;
+      height: 62px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 36% 26%, rgba(255,255,255,0.9), transparent 18%),
+        linear-gradient(135deg, #ff5faf, #00d2ff);
+      box-shadow: 0 0 34px rgba(0, 210, 255, 0.36);
+      display: grid;
+      place-items: center;
+      font: 900 24px/1 "Microsoft YaHei", sans-serif;
+      color: #fff;
+    }
+
+    .toast {
+      position: absolute;
+      left: 50%;
+      bottom: 102px;
+      z-index: 14;
+      max-width: calc(100% - 44px);
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.92);
+      color: #101321;
+      font: 600 14px/1.45 "Microsoft YaHei", sans-serif;
+      opacity: 0;
+      transform: translate(-50%, 10px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    @keyframes breathe {
+      from { transform: scale(1); opacity: 0.68; }
+      to { transform: scale(1.08); opacity: 0.9; }
+    }
+
+    @keyframes driftStars {
+      from { background-position: 0 0; }
+      to { background-position: 0 -360px; }
+    }
+
+    @keyframes dustSpin {
+      from { transform: rotate(0deg) scale(1.2); }
+      to { transform: rotate(360deg) scale(1.2); }
+    }
+
+    @media (min-aspect-ratio: 9 / 16) {
+      :root {
+        --frame-h: 100vh;
+        --frame-w: min(450px, calc(100vh * 9 / 16));
+      }
+    }
+  </style>
 </head>
 <body>
+  <main class="phone-stage" aria-label="汉字宇宙首页">
+    <div class="nebula"></div>
+    <div class="stars"></div>
+    <div class="dust"></div>
 
-<div class="star-bg"></div>
+    <header class="hud">
+      <div class="title-group">
+        <p class="eyebrow">HANZI COSMOS</p>
+        <h1>汉字宇宙</h1>
+      </div>
+      <div class="counter" aria-label="汉字星球数量">
+        <strong id="planet-count">0</strong>
+        <span>字星</span>
+      </div>
+    </header>
 
-<!-- 1. 宇宙首页 -->
-<div id="universe-container"></div>
+    <section class="orbit-field" id="orbit-field" aria-label="运行中的汉字星球"></section>
 
-<!-- 2. 字碰碰物理场 -->
-<canvas id="physics-canvas"></canvas>
-<div class="physics-hint">拖拽星球碰撞 · 火+土=火星 · 点击空白返回</div>
+    <section class="dock" aria-live="polite">
+      <div class="info-panel">
+        <div class="label">当前汉字视频入口</div>
+        <div class="value" id="active-word">点击任意星球</div>
+      </div>
+      <div class="play-chip" aria-hidden="true">▶</div>
+    </section>
 
-<!-- 3. 底部导航 -->
-<div class="ui-layer" id="main-nav">
-    <button class="action-btn-ui" onclick="openCreator()">+ 创造星球</button>
-    <button class="action-btn-ui" onclick="startCatJourney()" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">🐱 猫字演变</button>
-    <button class="action-btn-ui" onclick="togglePhysics()" style="background: linear-gradient(135deg, #4ade80 0%, #3b82f6 100%);">⚛️ 字碰碰</button>
-</div>
+    <div class="toast" id="toast">已选择汉字星球</div>
+  </main>
 
-<!-- 4. 创世弹窗 -->
-<div class="modal-overlay" id="creator-modal">
-    <div class="creator-panel">
-        <h2 style="margin-bottom: 20px;">铸造新汉字</h2>
-        <div class="input-group">
-            <label>汉字名称</label>
-            <input type="text" id="char-input" placeholder="例如：梦" maxlength="1">
-        </div>
-        <div class="input-group">
-            <label>上传视频 (MP4/WebM)</label>
-            <label for="video-input" class="file-upload-btn" id="file-label">📂 点击选择视频文件</label>
-            <input type="file" id="video-input" accept="video/*" style="display:none;">
-        </div>
-        <button class="submit-btn" onclick="createPlanet()">发射入轨</button>
-        <button class="action-btn-ui" onclick="closeCreator()" style="margin-top:10px; background:transparent; color:#aaa; width:100%;">取消</button>
-    </div>
-</div>
-
-<!-- 5. 视频播放器 -->
-<div class="video-player-overlay" id="video-overlay">
-    <div class="close-video" onclick="closeVideo()">×</div>
-    <video id="main-player" controls playsinline></video>
-</div>
-
-<!-- 6. 猫字教学场景 -->
-<div id="cat-scene">
-    <div class="stage-box">
-        <div id="cat1" class="cat-img">🐱</div>
-        <div id="cat2" class="cat-img">😼</div>
-        <div id="cat3" class="cat-img">😻</div>
-        <div id="text-xing" class="cat-img xing-shu">猫</div>
-        <div id="text-hei" class="cat-img hei-ti">猫</div>
-        <svg class="stroke-container" viewBox="0 0 100 100">
-            <path class="stroke" id="s1" d="M30,20 Q40,20 40,30 T30,50" />
-            <path class="stroke" id="s2" d="M50,20 L50,80" />
-            <path class="stroke" id="s3" d="M40,40 L70,40" />
-        </svg>
-        <div id="pen" class="magic-pen"></div>
-    </div>
-    <div style="margin-top: 20px; color: #666; font-size: 18px;">正在学习：猫 (māo)</div>
-    <button class="action-btn-ui" onclick="exitCatScene()" style="margin-top:30px; background:#333; color:white;">返回宇宙</button>
-</div>
-
-<script>
-/**
- * ============================================================
- *  模块一：宇宙 UGC 系统 (首页 & 上传)
- * ============================================================
- */
-const universeContainer = document.getElementById('universe-container');
-const mainNav = document.getElementById('main-nav');
-let planetsData = [
-    { id: 1, char: '云', colorClass: 'texture-4', size: 100, x: 20, y: 30, videoSrc: null },
-    { id: 2, char: '风', colorClass: 'texture-2', size: 70, x: 70, y: 20, videoSrc: null },
-    { id: 3, char: '雨', colorClass: 'texture-1', size: 80, x: 50, y: 60, videoSrc: null }
-];
-
-function renderPlanets() {
-    universeContainer.innerHTML = '';
-    planetsData.forEach(p => {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'planet-wrapper';
-        wrapper.style.left = `${p.x || Math.random()*80+10}%`;
-        wrapper.style.top = `${p.y || Math.random()*70+10}%`;
-        wrapper.style.animationDelay = `-${Math.random()*5}s`;
-        
-        const body = document.createElement('div');
-        body.className = `planet-body ${p.colorClass}`;
-        body.style.width = `${p.size}px`; body.style.height = `${p.size}px`;
-        body.innerText = p.char; // 直接在球体上显示字
-        
-        const label = document.createElement('div');
-        label.className = 'planet-label'; label.innerText = p.char;
-        
-        wrapper.onclick = () => playVideo(p.videoSrc, p.char);
-        wrapper.appendChild(body); wrapper.appendChild(label);
-        universeContainer.appendChild(wrapper);
-    });
-}
-
-// 上传逻辑
-const modal = document.getElementById('creator-modal');
-const fileInput = document.getElementById('video-input');
-const fileLabel = document.getElementById('file-label');
-
-function openCreator() { modal.classList.add('active'); }
-function closeCreator() { 
-    modal.classList.remove('active'); 
-    document.getElementById('char-input').value = ''; 
-    fileInput.value = ''; fileLabel.innerText = '📂 点击选择视频文件'; 
-}
-fileInput.addEventListener('change', function(e) {
-    if (e.target.files.length > 0) { 
-        fileLabel.innerText = `✅ ${e.target.files[0].name}`; 
-        fileLabel.style.borderColor = '#00d2ff'; fileLabel.style.color = '#00d2ff'; 
-    }
-});
-function createPlanet() {
-    const charVal = document.getElementById('char-input').value.trim();
-    const file = fileInput.files[0];
-    if (!charVal || !file) { alert("请输入汉字并上传视频！"); return; }
-    const videoUrl = URL.createObjectURL(file);
-    const textures = ['texture-1', 'texture-2', 'texture-3', 'texture-4'];
-    planetsData.push({ 
-        id: Date.now(), char: charVal, 
-        colorClass: textures[Math.floor(Math.random() * textures.length)], 
-        size: Math.floor(Math.random() * 60) + 60, 
-        x: Math.random() * 80 + 10, y: Math.random() * 70 + 10, 
-        videoSrc: videoUrl 
-    });
-    renderPlanets(); closeCreator();
-    setTimeout(() => playVideo(videoUrl, charVal), 500);
-}
-
-// 视频播放
-const videoOverlay = document.getElementById('video-overlay');
-const mainPlayer = document.getElementById('main-player');
-function playVideo(src, title) {
-    if (!src) { alert(`[${title}] 暂无视频源`); return; }
-    mainPlayer.src = src; videoOverlay.classList.add('active'); mainPlayer.play();
-}
-function closeVideo() { videoOverlay.classList.remove('active'); mainPlayer.pause(); mainPlayer.src = ""; }
-
-
-/**
- * ============================================================
- *  模块二：“猫”字演变教学系统
- * ============================================================
- */
-const catScene = document.getElementById('cat-scene');
-async function startCatJourney() {
-    catScene.classList.add('active');
-    await runCatAnimation();
-}
-function exitCatScene() { catScene.classList.remove('active'); }
-
-async function runCatAnimation() {
-    const wait = ms => new Promise(r => setTimeout(r, ms));
-    // 重置状态
-    document.querySelectorAll('.cat-img, .magic-pen').forEach(el => el.classList.remove('visible'));
-    document.querySelectorAll('.stroke').forEach(el => el.style.animation = 'none');
-    
-    await wait(300);
-    // 1. 猫咪出现
-    for (let id of ['cat1', 'cat2', 'cat3']) {
-        const el = document.getElementById(id);
-        el.classList.add('visible'); await wait(800);
-        if(id !== 'cat3') el.classList.remove('visible');
-    }
-    await wait(500);
-    // 2. 行书
-    const xingShu = document.getElementById('text-xing');
-    document.getElementById('cat3').classList.remove('visible');
-    xingShu.classList.add('visible'); await wait(1500);
-    // 3. 黑体
-    const heiTi = document.getElementById('text-hei');
-    xingShu.classList.remove('visible'); heiTi.classList.add('visible'); await wait(1000);
-    
-    // 4. 笔顺书写
-    heiTi.classList.remove('visible');
-    const pen = document.getElementById('pen');
-    const strokes = [...document.querySelectorAll('.stroke')];
-    pen.classList.add('visible');
-
-    const penPath = [
-        { left: '94px', top: '34px' },
-        { left: '132px', top: '92px' },
-        { left: '168px', top: '84px' }
+  <script>
+    const chars = "人身心声相仁义礼智信头发眼脸哭笑欢衣食住你我他她爸妈兄弟姐妹".split("");
+    const palette = [
+      ["#ffd166", "#ef476f", "#70163c"],
+      ["#7bdff2", "#4d96ff", "#16213e"],
+      ["#b8f2e6", "#06d6a0", "#064e3b"],
+      ["#f7aef8", "#9b5de5", "#2d124f"],
+      ["#fbc4ab", "#f9844a", "#5a1f12"],
+      ["#caffbf", "#80ed99", "#1b4332"],
+      ["#fdffb6", "#ffbe0b", "#5f3d00"],
+      ["#ffc6ff", "#ff4d6d", "#590d22"],
+      ["#a0c4ff", "#4361ee", "#111a63"],
+      ["#d0f4de", "#00bbf9", "#063b52"],
+      ["#e0aaff", "#7209b7", "#240046"],
+      ["#ffccd5", "#ff758f", "#6d213c"]
     ];
 
-    for (let i = 0; i < strokes.length; i++) {
-        pen.style.left = penPath[i].left;
-        pen.style.top = penPath[i].top;
-        strokes[i].style.animation = 'drawStroke 1.15s ease forwards';
-        await wait(1200);
+    const field = document.getElementById("orbit-field");
+    const activeWord = document.getElementById("active-word");
+    const toast = document.getElementById("toast");
+    const count = document.getElementById("planet-count");
+    const planets = [];
+    let toastTimer = 0;
+    let lastTime = performance.now();
+
+    function stageSize() {
+      const rect = field.getBoundingClientRect();
+      return { width: rect.width, height: rect.height };
     }
 
-    pen.classList.remove('visible');
-    await wait(300);
-    heiTi.classList.add('visible');
-}
+    function makePlanet(char, index) {
+      const colors = palette[index % palette.length];
+      const size = Math.round(26 + Math.random() * 58 + (index % 7 === 0 ? 18 : 0));
+      const { width, height } = stageSize();
+      const safeTop = Math.max(96, height * 0.13);
+      const safeBottom = Math.max(112, height * 0.16);
+      const planet = document.createElement("button");
+      const hasRing = index % 5 === 1 || index % 9 === 0;
+      planet.className = `planet${hasRing ? " ring" : ""}`;
+      planet.type = "button";
+      planet.setAttribute("aria-label", `${char}字星球，点击播放对应汉字视频`);
+      planet.style.setProperty("--size", `${size}px`);
+      planet.style.setProperty("--light", colors[0]);
+      planet.style.setProperty("--base", colors[1]);
+      planet.style.setProperty("--shade", colors[2]);
+      planet.style.setProperty("--glow", colors[(index + 1) % colors.length]);
+      planet.innerHTML = `<span class="char">${char}</span>${hasRing ? '<span class="ring"></span>' : ""}`;
+      field.appendChild(planet);
 
-/**
- * ============================================================
- *  模块三：字碰碰物理场
- * ============================================================
- */
-const physicsCanvas = document.getElementById('physics-canvas');
-const ctx = physicsCanvas.getContext('2d');
-let physicsActive = false;
-let physicsBodies = [];
-let draggedBody = null;
-let dragOffset = { x: 0, y: 0 };
-let rafId = null;
+      const body = {
+        el: planet,
+        char,
+        size,
+        x: Math.random() * Math.max(1, width - size),
+        y: safeTop + Math.random() * Math.max(1, height - safeTop - safeBottom - size),
+        vx: (Math.random() > 0.5 ? 1 : -1) * (7 + Math.random() * 14),
+        vy: (Math.random() > 0.5 ? 1 : -1) * (5 + Math.random() * 12),
+        phase: Math.random() * Math.PI * 2,
+        pulse: 0.96 + Math.random() * 0.1
+      };
 
-function resizeCanvas() {
-    const dpr = window.devicePixelRatio || 1;
-    physicsCanvas.width = window.innerWidth * dpr;
-    physicsCanvas.height = window.innerHeight * dpr;
-    physicsCanvas.style.width = `${window.innerWidth}px`;
-    physicsCanvas.style.height = `${window.innerHeight}px`;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
-
-function seedPhysicsBodies() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    physicsBodies = [
-        { char: '火', x: w * 0.32, y: h * 0.38, r: 42, vx: 1.8, vy: 1.2, color: '#fb7185' },
-        { char: '土', x: w * 0.68, y: h * 0.48, r: 46, vx: -1.5, vy: -1, color: '#facc15' },
-        { char: '水', x: w * 0.48, y: h * 0.66, r: 38, vx: 1.2, vy: -1.6, color: '#38bdf8' },
-        { char: '木', x: w * 0.18, y: h * 0.68, r: 36, vx: 1.7, vy: -1.1, color: '#4ade80' }
-    ];
-}
-
-function togglePhysics() {
-    physicsActive = !physicsActive;
-    physicsCanvas.classList.toggle('active', physicsActive);
-    universeContainer.style.opacity = physicsActive ? '0.18' : '1';
-
-    if (physicsActive) {
-        resizeCanvas();
-        seedPhysicsBodies();
-        drawPhysics();
-    } else {
-        cancelAnimationFrame(rafId);
-        ctx.clearRect(0, 0, physicsCanvas.width, physicsCanvas.height);
+      planet.addEventListener("click", () => choosePlanet(body));
+      planets.push(body);
+      updatePlanet(body, 0);
     }
-}
 
-function drawPhysics() {
-    if (!physicsActive) return;
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    ctx.clearRect(0, 0, w, h);
+    function choosePlanet(body) {
+      activeWord.textContent = `${body.char}：点击后可接入“${body.char}”字视频`;
+      toast.textContent = `已选择「${body.char}」字星球，可绑定视频源`;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
+    }
 
-    physicsBodies.forEach(body => {
-        if (body !== draggedBody) {
-            body.x += body.vx;
-            body.y += body.vy;
+    function updatePlanet(body, time) {
+      const bob = Math.sin(time * 0.0014 + body.phase) * 4;
+      body.el.style.setProperty("--x", `${body.x}px`);
+      body.el.style.setProperty("--y", `${body.y + bob}px`);
+      body.el.style.transform = `translate3d(var(--x), var(--y), 0) scale(${body.pulse})`;
+    }
+
+    function tick(time) {
+      const { width, height } = stageSize();
+      const dt = Math.min(0.032, (time - lastTime) / 1000);
+      lastTime = time;
+      const safeTop = Math.max(96, height * 0.13);
+      const safeBottom = Math.max(112, height * 0.16);
+
+      planets.forEach(body => {
+        body.x += body.vx * dt;
+        body.y += body.vy * dt;
+
+        if (body.x <= 0 || body.x + body.size >= width) {
+          body.vx *= -1;
+          body.x = Math.max(0, Math.min(width - body.size, body.x));
         }
 
-        if (body.x - body.r < 0 || body.x + body.r > w) body.vx *= -1;
-        if (body.y - body.r < 0 || body.y + body.r > h) body.vy *= -1;
-        body.x = Math.max(body.r, Math.min(w - body.r, body.x));
-        body.y = Math.max(body.r, Math.min(h - body.r, body.y));
-    });
-
-    for (let i = 0; i < physicsBodies.length; i++) {
-        for (let j = i + 1; j < physicsBodies.length; j++) {
-            resolveCollision(physicsBodies[i], physicsBodies[j]);
+        if (body.y <= safeTop || body.y + body.size >= height - safeBottom) {
+          body.vy *= -1;
+          body.y = Math.max(safeTop, Math.min(height - safeBottom - body.size, body.y));
         }
+
+        updatePlanet(body, time);
+      });
+
+      requestAnimationFrame(tick);
     }
 
-    physicsBodies.forEach(body => {
-        const gradient = ctx.createRadialGradient(body.x - body.r * 0.35, body.y - body.r * 0.35, 5, body.x, body.y, body.r);
-        gradient.addColorStop(0, '#fff7');
-        gradient.addColorStop(0.28, body.color);
-        gradient.addColorStop(1, '#111827');
-        ctx.save();
-        ctx.shadowColor = body.color;
-        ctx.shadowBlur = 22;
-        ctx.beginPath();
-        ctx.arc(body.x, body.y, body.r, 0, Math.PI * 2);
-        ctx.fillStyle = gradient;
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = '#fff';
-        ctx.font = `700 ${body.r}px KaiTi, Microsoft YaHei, serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(body.char, body.x, body.y + 3);
-        ctx.restore();
+    function boot() {
+      chars.forEach(makePlanet);
+      count.textContent = String(chars.length);
+      requestAnimationFrame(tick);
+    }
+
+    window.addEventListener("resize", () => {
+      const { width, height } = stageSize();
+      planets.forEach(body => {
+        body.x = Math.max(0, Math.min(width - body.size, body.x));
+        body.y = Math.max(96, Math.min(height - 120 - body.size, body.y));
+      });
     });
 
-    rafId = requestAnimationFrame(drawPhysics);
-}
-
-function resolveCollision(a, b) {
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const distance = Math.hypot(dx, dy) || 1;
-    const minDistance = a.r + b.r;
-    if (distance >= minDistance) return;
-
-    if (new Set([a.char, b.char]).size === 2 && [a.char, b.char].includes('火') && [a.char, b.char].includes('土')) {
-        makeMars(a, b);
-        return;
-    }
-
-    const overlap = (minDistance - distance) / 2;
-    const nx = dx / distance;
-    const ny = dy / distance;
-    a.x -= nx * overlap;
-    a.y -= ny * overlap;
-    b.x += nx * overlap;
-    b.y += ny * overlap;
-    [a.vx, b.vx] = [b.vx, a.vx];
-    [a.vy, b.vy] = [b.vy, a.vy];
-}
-
-function makeMars(a, b) {
-    const x = (a.x + b.x) / 2;
-    const y = (a.y + b.y) / 2;
-    physicsBodies = physicsBodies.filter(body => body !== a && body !== b);
-    physicsBodies.push({ char: '火星', x, y, r: 58, vx: 1.4, vy: -1.3, color: '#ef4444' });
-
-    planetsData.push({
-        id: Date.now(),
-        char: '火星',
-        colorClass: 'texture-mars',
-        size: 110,
-        x: Math.random() * 65 + 15,
-        y: Math.random() * 55 + 15,
-        videoSrc: null
-    });
-    renderPlanets();
-}
-
-function canvasPoint(e) {
-    const touch = e.touches && e.touches[0];
-    return {
-        x: touch ? touch.clientX : e.clientX,
-        y: touch ? touch.clientY : e.clientY
-    };
-}
-
-function startDrag(e) {
-    if (!physicsActive) return;
-    const point = canvasPoint(e);
-    draggedBody = [...physicsBodies].reverse().find(body => Math.hypot(point.x - body.x, point.y - body.y) <= body.r);
-    if (draggedBody) {
-        dragOffset.x = point.x - draggedBody.x;
-        dragOffset.y = point.y - draggedBody.y;
-        physicsCanvas.style.cursor = 'grabbing';
-        e.preventDefault();
-    } else {
-        togglePhysics();
-    }
-}
-
-function moveDrag(e) {
-    if (!draggedBody) return;
-    const point = canvasPoint(e);
-    draggedBody.x = point.x - dragOffset.x;
-    draggedBody.y = point.y - dragOffset.y;
-    draggedBody.vx = 0;
-    draggedBody.vy = 0;
-    e.preventDefault();
-}
-
-function endDrag() {
-    if (draggedBody) {
-        draggedBody.vx = (Math.random() - 0.5) * 3;
-        draggedBody.vy = (Math.random() - 0.5) * 3;
-    }
-    draggedBody = null;
-    physicsCanvas.style.cursor = 'grab';
-}
-
-physicsCanvas.addEventListener('mousedown', startDrag);
-physicsCanvas.addEventListener('mousemove', moveDrag);
-window.addEventListener('mouseup', endDrag);
-physicsCanvas.addEventListener('touchstart', startDrag, { passive: false });
-physicsCanvas.addEventListener('touchmove', moveDrag, { passive: false });
-window.addEventListener('touchend', endDrag);
-window.addEventListener('resize', () => {
-    resizeCanvas();
-    if (physicsActive) seedPhysicsBodies();
-});
-
-renderPlanets();
-</script>
+    boot();
+  </script>
 </body>
 </html>
