@@ -7,12 +7,13 @@ export const metadata: Metadata = {
 
 export default function HanziUniversePage() {
   return (
-    <main className="fixed inset-0 z-50 bg-black">
+    <main className="min-h-dvh bg-black">
       <iframe
         src="/hanzi-universe.html"
         title="汉字宇宙"
-        className="h-full w-full border-0"
+        className="block h-dvh min-h-screen w-full border-0"
         allow="fullscreen"
+        scrolling="yes"
       />
     </main>
   );

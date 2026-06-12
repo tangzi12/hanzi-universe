@@ -7,7 +7,7 @@
   <style>
     :root {
       --stage-w: min(100vw, 450px);
-      --stage-h: min(100vh, calc(var(--stage-w) * 16 / 9));
+      --stage-h: min(100dvh, calc(var(--stage-w) * 16 / 9));
       --ink: #ffffff;
       --muted: rgba(255, 255, 255, 0.66);
       --glass: rgba(6, 8, 24, 0.72);
@@ -24,18 +24,21 @@
     html,
     body {
       width: 100%;
-      height: 100%;
-      overflow: hidden;
+      min-height: 100%;
+      overflow-x: hidden;
+      overflow-y: auto;
       background: #02030b;
       color: var(--ink);
       font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
-      touch-action: none;
+      touch-action: pan-y;
       user-select: none;
     }
 
     body {
       display: grid;
       place-items: center;
+      min-height: 100dvh;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
       background:
         radial-gradient(circle at 50% 18%, rgba(91, 70, 255, 0.38), transparent 33%),
         radial-gradient(circle at 15% 82%, rgba(0, 220, 255, 0.14), transparent 24%),
@@ -46,9 +49,10 @@
       position: relative;
       width: var(--stage-w);
       height: var(--stage-h);
-      max-height: 100vh;
+      max-height: 100dvh;
       aspect-ratio: 9 / 16;
       overflow: hidden;
+      touch-action: none;
       background: #02020b;
       box-shadow: 0 0 70px rgba(71, 115, 255, 0.24);
     }
@@ -331,8 +335,29 @@
 
     @media (min-aspect-ratio: 9 / 16) {
       :root {
-        --stage-h: 100vh;
-        --stage-w: min(450px, calc(100vh * 9 / 16));
+        --stage-h: 100dvh;
+        --stage-w: min(450px, calc(100dvh * 9 / 16));
+      }
+    }
+
+    @supports not (height: 100dvh) {
+      :root {
+        --stage-h: min(100vh, calc(var(--stage-w) * 16 / 9));
+      }
+
+      body {
+        min-height: 100vh;
+      }
+
+      .stage {
+        max-height: 100vh;
+      }
+
+      @media (min-aspect-ratio: 9 / 16) {
+        :root {
+          --stage-h: 100vh;
+          --stage-w: min(450px, calc(100vh * 9 / 16));
+        }
       }
     }
   </style>
@@ -399,10 +424,10 @@
 `;
 
     const VIDEO_MAP = {
-      "云": ["/videos/yun-1.mp4", "/videos/yun-2.mp4"],
-      "雨": ["/videos/yu-1.mp4", "/videos/yu-2.mp4", "/videos/yu-3.mp4"],
-      "水": ["/videos/shui-1.mp4", "/videos/shui-2.mp4", "/videos/shui-3.mp4"],
-      "火": ["/videos/huo-1.mp4", "/videos/huo-2.mp4"]
+      "云": ["videos/yun-1.mp4", "videos/yun-2.mp4"],
+      "雨": ["videos/yu-1.mp4", "videos/yu-2.mp4", "videos/yu-3.mp4"],
+      "水": ["videos/shui-1.mp4", "videos/shui-2.mp4", "videos/shui-3.mp4"],
+      "火": ["videos/huo-1.mp4", "videos/huo-2.mp4"]
     };
 
     const ART_CHAR_SRC = {
@@ -457,6 +482,8 @@
     let dragBody = null;
     let dragOffset = { x: 0, y: 0 };
     let pointerDown = null;
+    let lastPointerPos = null;
+    let universePanning = false;
     let last = performance.now();
     let toastTimer = 0;
     let videoList = [];
@@ -1538,9 +1565,19 @@
         .find(b => Math.hypot(pos.x - b.x, pos.y - b.y) <= b.r);
     }
 
+    function panUniverse(dx, dy) {
+      planets.forEach(p => {
+        const depth = 0.35 + p.z * 0.65;
+        p.x += dx * depth;
+        p.y += dy * depth;
+      });
+    }
+
     function onDown(event) {
       const pos = pointerPos(event);
       pointerDown = pos;
+      lastPointerPos = pos;
+      universePanning = false;
       if (mode === "word") dragBody = hitBody(pos, wordBodies);
       if (mode === "love") dragBody = hitBody(pos, loveBodies);
       if (mode === "brush") {
@@ -1560,6 +1597,18 @@
     }
 
     function onMove(event) {
+      if (mode === "universe" && pointerDown && lastPointerPos) {
+        const pos = pointerPos(event);
+        const moved = Math.hypot(pos.x - pointerDown.x, pos.y - pointerDown.y);
+        if (moved > 8) universePanning = true;
+        if (universePanning) {
+          panUniverse(pos.x - lastPointerPos.x, pos.y - lastPointerPos.y);
+          lastPointerPos = pos;
+          statusText.textContent = "滑动探索汉字星球，轻点云、雨、水、火播放视频";
+          event.preventDefault();
+        }
+        return;
+      }
       if (mode === "brush") {
         const pos = pointerPos(event);
         userTrail.push(pos);
@@ -1578,7 +1627,7 @@
       if (dragBody) {
         dragBody.vx = (Math.random() - 0.5) * 48;
         dragBody.vy = (Math.random() - 0.5) * 48;
-      } else if (mode === "universe" && pointerDown && Math.hypot(pos.x - pointerDown.x, pos.y - pointerDown.y) < 12) {
+      } else if (mode === "universe" && pointerDown && !universePanning && Math.hypot(pos.x - pointerDown.x, pos.y - pointerDown.y) < 12) {
         const planet = hitPlanet(pos);
         if (planet) {
           statusText.textContent = VIDEO_MAP[planet.char] ? `${planet.char}：打开汉字视频` : `${planet.char}：视频制作中`;
@@ -1587,6 +1636,8 @@
       }
       dragBody = null;
       pointerDown = null;
+      lastPointerPos = null;
+      universePanning = false;
     }
 
     function loop(time) {
