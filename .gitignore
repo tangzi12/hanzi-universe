@@ -4,4 +4,5 @@ out/
 tsconfig.tsbuildinfo
 .env*.local
 .vercel/
+.vercel-token
 *.log
