@@ -713,7 +713,7 @@
       if (!img) return;
       const alpha = options.alpha ?? 1;
       const time = options.time || performance.now();
-      const badgeR = r * (options.prominent ? 0.98 : 0.86);
+      const badgeR = r * (options.prominent ? 1.08 : 1);
       const pulse = Math.sin(time * 0.003) * badgeR * 0.03;
       const drawR = badgeR + pulse;
 
@@ -733,7 +733,7 @@
       ctx.beginPath();
       ctx.arc(x, y, drawR, 0, Math.PI * 2);
       ctx.clip();
-      drawImageContain(img, x - drawR, y - drawR, drawR * 2, drawR * 2);
+      drawImageCover(img, x - drawR, y - drawR, drawR * 2, drawR * 2);
       ctx.restore();
 
       ctx.save();
